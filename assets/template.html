@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="{{VD_LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src '{{VD_SCRIPT_HASH}}'; style-src '{{VD_STYLE_HASH}}'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>{{VD_TITLE}}</title>
+<style>{{VD_CSS}}</style>
+</head>
+<body>
+<header class="vd-header">
+  <h1 class="vd-title">{{VD_TITLE}}</h1>
+  <div class="vd-controls">
+    <input id="vd-search" type="search" placeholder="{{VD_T_SEARCH}}" aria-label="{{VD_T_SEARCH}}">
+    <button id="vd-reset" type="button">{{VD_T_RESET}}</button>
+    <button id="vd-theme" type="button">{{VD_T_THEME}}</button>
+  </div>
+</header>
+<main class="vd-stage">
+{{VD_SVG}}</main>
+{{VD_CARDS}}<script type="application/json" id="vd-data">{{VD_DATA}}</script>
+<script>{{VD_JS}}</script>
+</body>
+</html>
