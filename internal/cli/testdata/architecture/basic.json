@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Sample Web App",
+    "output": "web-app-rendered.html",
+    "quality_profile": "showcase",
+    "locale": "ja",
+    "views": [
+      {
+        "id": "request-path",
+        "label": "Primary request path",
+        "focus": ["users", "cdn", "api", "db"],
+        "note": "エッジから永続化まで主要リクエストを追う"
+      }
+    ]
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "Users",
+      "sublabel": "Browser / Mobile", "pos": [40, 290], "size": [120, 60] },
+    { "id": "cdn", "type": "cloud", "label": "CloudFront",
+      "sublabel": "edge cache", "pos": [250, 290], "size": [130, 60] },
+    { "id": "api", "type": "backend", "label": "API Server",
+      "sublabel": "FastAPI :8000", "pos": [470, 290], "size": [130, 60] },
+    { "id": "db", "type": "database", "label": "PostgreSQL",
+      "sublabel": "primary :5432", "pos": [690, 290], "size": [130, 60],
+      "tag": "OAI protected" },
+    { "id": "cache", "type": "database", "label": "Redis",
+      "sublabel": "read-through", "pos": [470, 140], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "AWS Region: us-west-2", "wraps": ["api", "db", "cache"] }
+  ],
+  "connections": [
+    { "id": "users-to-cdn", "from": "users", "to": "cdn",
+      "label": "HTTPS", "variant": "emphasis" },
+    { "id": "cdn-to-api", "from": "cdn", "to": "api", "label": "forward" },
+    { "id": "api-sql", "from": "api", "to": "db", "label": "SQL",
+      "fromSide": "right", "toSide": "left" },
+    { "id": "api-cache", "from": "api", "to": "cache", "label": "GET/SET",
+      "fromSide": "top", "toSide": "bottom" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Edge",
+      "items": ["CloudFront が全トラフィックの前段", "静的配信は OAI 経由"] },
+    { "dot": "green", "title": "Persistence",
+      "items": ["PostgreSQL がプライマリストア", "Redis は read-through キャッシュ"] }
+  ]
+}

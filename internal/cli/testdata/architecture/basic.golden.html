@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-G3VuHhdJtz4WfJajhrn0nVYCRQkvabqs1IUX2jmUVWQ='; style-src 'sha256-msymrkKkB8WYYqKeDJjTNw1jAL+P3C+2Ughb5zLto5I='; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>Sample Web App</title>
+<style>:root {
+  --vd-bg: oklch(97.5% 0.005 250);
+  --vd-surface: oklch(100% 0 0);
+  --vd-text: oklch(22% 0.02 255);
+  --vd-text-dim: oklch(45% 0.02 255);
+  --vd-border: oklch(88% 0.01 250);
+  --vd-accent: oklch(58% 0.17 250);
+  --vd-edge: oklch(52% 0.03 255);
+  --vd-edge-emphasis: oklch(56% 0.19 250);
+  --vd-edge-security: oklch(55% 0.16 25);
+  --vd-boundary: oklch(60% 0.05 250);
+  --vd-t-frontend: oklch(93% 0.05 250);
+  --vd-t-frontend-line: oklch(55% 0.15 250);
+  --vd-t-backend: oklch(93% 0.05 150);
+  --vd-t-backend-line: oklch(50% 0.13 150);
+  --vd-t-database: oklch(93% 0.05 80);
+  --vd-t-database-line: oklch(55% 0.13 80);
+  --vd-t-cloud: oklch(93% 0.04 210);
+  --vd-t-cloud-line: oklch(55% 0.11 210);
+  --vd-t-security: oklch(93% 0.05 25);
+  --vd-t-security-line: oklch(52% 0.16 25);
+  --vd-t-messagebus: oklch(93% 0.05 310);
+  --vd-t-messagebus-line: oklch(52% 0.15 310);
+  --vd-t-external: oklch(94% 0.005 250);
+  --vd-t-external-line: oklch(50% 0.02 250);
+  --vd-highlight: oklch(85% 0.15 95);
+  --vd-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+:root:not([data-theme="light"]) {
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --vd-bg: oklch(20% 0.015 255);
+    --vd-surface: oklch(25% 0.015 255);
+    --vd-text: oklch(92% 0.01 255);
+    --vd-text-dim: oklch(70% 0.02 255);
+    --vd-border: oklch(35% 0.02 255);
+    --vd-accent: oklch(72% 0.14 250);
+    --vd-edge: oklch(70% 0.03 255);
+    --vd-edge-emphasis: oklch(72% 0.16 250);
+    --vd-edge-security: oklch(70% 0.15 25);
+    --vd-boundary: oklch(62% 0.05 250);
+    --vd-t-frontend: oklch(33% 0.06 250);
+    --vd-t-frontend-line: oklch(70% 0.13 250);
+    --vd-t-backend: oklch(33% 0.06 150);
+    --vd-t-backend-line: oklch(70% 0.12 150);
+    --vd-t-database: oklch(33% 0.06 80);
+    --vd-t-database-line: oklch(72% 0.12 80);
+    --vd-t-cloud: oklch(33% 0.05 210);
+    --vd-t-cloud-line: oklch(70% 0.10 210);
+    --vd-t-security: oklch(33% 0.06 25);
+    --vd-t-security-line: oklch(70% 0.14 25);
+    --vd-t-messagebus: oklch(33% 0.06 310);
+    --vd-t-messagebus-line: oklch(70% 0.13 310);
+    --vd-t-external: oklch(30% 0.01 255);
+    --vd-t-external-line: oklch(72% 0.02 255);
+    --vd-highlight: oklch(50% 0.13 95);
+  }
+}
+:root[data-theme="dark"] {
+  --vd-bg: oklch(20% 0.015 255);
+  --vd-surface: oklch(25% 0.015 255);
+  --vd-text: oklch(92% 0.01 255);
+  --vd-text-dim: oklch(70% 0.02 255);
+  --vd-border: oklch(35% 0.02 255);
+  --vd-accent: oklch(72% 0.14 250);
+  --vd-edge: oklch(70% 0.03 255);
+  --vd-edge-emphasis: oklch(72% 0.16 250);
+  --vd-edge-security: oklch(70% 0.15 25);
+  --vd-boundary: oklch(62% 0.05 250);
+  --vd-t-frontend: oklch(33% 0.06 250);
+  --vd-t-frontend-line: oklch(70% 0.13 250);
+  --vd-t-backend: oklch(33% 0.06 150);
+  --vd-t-backend-line: oklch(70% 0.12 150);
+  --vd-t-database: oklch(33% 0.06 80);
+  --vd-t-database-line: oklch(72% 0.12 80);
+  --vd-t-cloud: oklch(33% 0.05 210);
+  --vd-t-cloud-line: oklch(70% 0.10 210);
+  --vd-t-security: oklch(33% 0.06 25);
+  --vd-t-security-line: oklch(70% 0.14 25);
+  --vd-t-messagebus: oklch(33% 0.06 310);
+  --vd-t-messagebus-line: oklch(70% 0.13 310);
+  --vd-t-external: oklch(30% 0.01 255);
+  --vd-t-external-line: oklch(72% 0.02 255);
+  --vd-highlight: oklch(50% 0.13 95);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--vd-bg);
+  color: var(--vd-text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header.vd-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--vd-border);
+  background: var(--vd-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.vd-title {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+.vd-controls {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  align-items: center;
+}
+.vd-controls input[type="search"] {
+  background: var(--vd-bg);
+  color: var(--vd-text);
+  border: 1px solid var(--vd-border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  width: 180px;
+}
+.vd-controls input[type="search"]:focus {
+  outline: 2px solid var(--vd-accent);
+  outline-offset: 1px;
+}
+.vd-controls button {
+  background: var(--vd-surface);
+  color: var(--vd-text);
+  border: 1px solid var(--vd-border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.vd-controls button:hover { border-color: var(--vd-accent); color: var(--vd-accent); }
+.vd-controls button:focus-visible { outline: 2px solid var(--vd-accent); outline-offset: 1px; }
+.vd-controls button:active { transform: translateY(1px); }
+
+main.vd-stage {
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+main.vd-stage.vd-panning { cursor: grabbing; }
+.vd-svg {
+  width: 100%;
+  height: calc(100vh - 54px);
+  display: block;
+}
+
+.vd-node-box {
+  fill: var(--vd-surface);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.12));
+}
+.vd-t-frontend .vd-node-box, .vd-legend-swatch.vd-t-frontend { fill: var(--vd-t-frontend); stroke: var(--vd-t-frontend-line); }
+.vd-t-backend .vd-node-box, .vd-legend-swatch.vd-t-backend { fill: var(--vd-t-backend); stroke: var(--vd-t-backend-line); }
+.vd-t-database .vd-node-box, .vd-legend-swatch.vd-t-database { fill: var(--vd-t-database); stroke: var(--vd-t-database-line); }
+.vd-t-cloud .vd-node-box, .vd-legend-swatch.vd-t-cloud { fill: var(--vd-t-cloud); stroke: var(--vd-t-cloud-line); }
+.vd-t-security .vd-node-box, .vd-legend-swatch.vd-t-security { fill: var(--vd-t-security); stroke: var(--vd-t-security-line); }
+.vd-t-messagebus .vd-node-box, .vd-legend-swatch.vd-t-messagebus { fill: var(--vd-t-messagebus); stroke: var(--vd-t-messagebus-line); }
+.vd-t-external .vd-node-box, .vd-legend-swatch.vd-t-external { fill: var(--vd-t-external); stroke: var(--vd-t-external-line); stroke-dasharray: 4 3; }
+
+.vd-node-label { fill: var(--vd-text); font-weight: 600; }
+.vd-node-sub { fill: var(--vd-text-dim); font-family: var(--vd-mono); }
+.vd-node-tag-pill { fill: var(--vd-highlight); stroke: none; }
+.vd-node-tag { fill: var(--vd-text); font-weight: 600; }
+
+.vd-node.vd-dim { opacity: 0.25; }
+.vd-node.vd-hit .vd-node-box { stroke: var(--vd-accent); stroke-width: 3; }
+
+.vd-edge { fill: none; stroke: var(--vd-edge); stroke-width: 1.6; }
+.vd-edge.vd-v-emphasis { stroke: var(--vd-edge-emphasis); stroke-width: 2.4; }
+.vd-edge.vd-v-security { stroke: var(--vd-edge-security); stroke-width: 1.8; }
+.vd-edge.vd-v-dashed { stroke-dasharray: 6 4; }
+.vd-arrowhead { fill: var(--vd-edge); stroke: none; }
+.vd-arrowhead.vd-v-emphasis { fill: var(--vd-edge-emphasis); }
+.vd-arrowhead.vd-v-security { fill: var(--vd-edge-security); }
+.vd-edge-label-mask { fill: var(--vd-bg); stroke: var(--vd-border); stroke-width: 0.5; }
+.vd-edge-label { fill: var(--vd-text-dim); font-family: var(--vd-mono); }
+
+.vd-boundary rect { fill: none; stroke: var(--vd-boundary); stroke-width: 1.2; stroke-dasharray: 8 5; }
+.vd-boundary-label { fill: var(--vd-boundary); font-weight: 600; letter-spacing: 0.04em; }
+
+.vd-legend-label { fill: var(--vd-text-dim); }
+.vd-legend-swatch { stroke-width: 1.2; }
+.vd-legend-line { stroke: var(--vd-edge); stroke-width: 2; }
+.vd-legend-line.vd-v-emphasis { stroke: var(--vd-edge-emphasis); }
+.vd-legend-line.vd-v-security { stroke: var(--vd-edge-security); }
+.vd-legend-line.vd-v-dashed { stroke-dasharray: 5 3; }
+
+section.vd-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--vd-border);
+  background: var(--vd-surface);
+}
+.vd-cards h2 {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vd-text-dim);
+  margin: 0;
+}
+.vd-cards article {
+  background: var(--vd-bg);
+  border: 1px solid var(--vd-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.vd-cards h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.vd-cards ul { margin: 0; padding-left: 18px; color: var(--vd-text-dim); font-size: 13px; }
+.vd-cards li { margin: 3px 0; }
+.vd-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.vd-dot-cyan { background: oklch(70% 0.12 210); }
+.vd-dot-blue { background: oklch(62% 0.16 255); }
+.vd-dot-green { background: oklch(65% 0.15 150); }
+.vd-dot-amber { background: oklch(75% 0.14 80); }
+.vd-dot-red { background: oklch(62% 0.18 25); }
+.vd-dot-purple { background: oklch(62% 0.16 310); }
+.vd-dot-gray { background: oklch(60% 0.01 255); }
+
+@media (max-width: 640px) {
+  .vd-controls input[type="search"] { width: 120px; }
+  .vd-svg { height: calc(100vh - 96px); }
+}
+</style>
+</head>
+<body>
+<header class="vd-header">
+  <h1 class="vd-title">Sample Web App</h1>
+  <div class="vd-controls">
+    <input id="vd-search" type="search" placeholder="ノードを検索" aria-label="ノードを検索">
+    <button id="vd-reset" type="button">表示をリセット</button>
+    <button id="vd-theme" type="button">テーマ</button>
+  </div>
+</header>
+<main class="vd-stage">
+<svg class="vd-svg" xmlns="http://www.w3.org/2000/svg" viewBox="16 74 848 376" role="img" aria-label="Sample Web App">
+<defs>
+<marker id="vd-arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" class="vd-arrowhead vd-v-default"/></marker>
+<marker id="vd-arrow-emphasis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" class="vd-arrowhead vd-v-emphasis"/></marker>
+<marker id="vd-arrow-security" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" class="vd-arrowhead vd-v-security"/></marker>
+<marker id="vd-arrow-dashed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" class="vd-arrowhead vd-v-dashed"/></marker>
+</defs>
+<g id="vd-canvas">
+<g class="vd-boundary vd-b-region">
+<rect x="450" y="98" width="390" height="272" rx="14"/>
+<text x="462" y="114" font-size="11.5" class="vd-boundary-label" text-anchor="start">AWS Region: us-west-2</text>
+</g>
+<g class="vd-edge-group" id="vd-edge-users-to-cdn">
+<path class="vd-edge vd-v-emphasis" d="M 160 320 L 250 320" marker-end="url(#vd-arrow-emphasis)"/>
+<rect class="vd-edge-label-mask" x="183.5" y="299" width="43" height="18" rx="4"/>
+<text x="205" y="311.85" font-size="11" class="vd-edge-label" text-anchor="middle">HTTPS</text>
+</g>
+<g class="vd-edge-group" id="vd-edge-cdn-to-api">
+<path class="vd-edge vd-v-default" d="M 380 320 L 470 320" marker-end="url(#vd-arrow-default)"/>
+<rect class="vd-edge-label-mask" x="396.9" y="299" width="56.2" height="18" rx="4"/>
+<text x="425" y="311.85" font-size="11" class="vd-edge-label" text-anchor="middle">forward</text>
+</g>
+<g class="vd-edge-group" id="vd-edge-api-sql">
+<path class="vd-edge vd-v-default" d="M 600 320 L 690 320" marker-end="url(#vd-arrow-default)"/>
+<rect class="vd-edge-label-mask" x="630.1" y="299" width="29.8" height="18" rx="4"/>
+<text x="645" y="311.85" font-size="11" class="vd-edge-label" text-anchor="middle">SQL</text>
+</g>
+<g class="vd-edge-group" id="vd-edge-api-cache">
+<path class="vd-edge vd-v-default" d="M 535 290 L 535 200" marker-end="url(#vd-arrow-default)"/>
+<rect class="vd-edge-label-mask" x="506.9" y="224" width="56.2" height="18" rx="4"/>
+<text x="535" y="236.85" font-size="11" class="vd-edge-label" text-anchor="middle">GET/SET</text>
+</g>
+<g class="vd-node vd-t-external" id="vd-node-users" data-label="Users">
+<rect class="vd-node-box" x="40" y="290" width="120" height="60" rx="10"/>
+<text x="100" y="317" font-size="14" class="vd-node-label" text-anchor="middle">Users</text>
+<text x="100" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">Browser / Mobile</text>
+</g>
+<g class="vd-node vd-t-cloud" id="vd-node-cdn" data-label="CloudFront">
+<rect class="vd-node-box" x="250" y="290" width="130" height="60" rx="10"/>
+<text x="315" y="317" font-size="14" class="vd-node-label" text-anchor="middle">CloudFront</text>
+<text x="315" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">edge cache</text>
+</g>
+<g class="vd-node vd-t-backend" id="vd-node-api" data-label="API Server">
+<rect class="vd-node-box" x="470" y="290" width="130" height="60" rx="10"/>
+<text x="535" y="317" font-size="14" class="vd-node-label" text-anchor="middle">API Server</text>
+<text x="535" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">FastAPI :8000</text>
+</g>
+<g class="vd-node vd-t-database" id="vd-node-db" data-label="PostgreSQL">
+<rect class="vd-node-box" x="690" y="290" width="130" height="60" rx="10"/>
+<text x="755" y="317" font-size="14" class="vd-node-label" text-anchor="middle">PostgreSQL</text>
+<text x="755" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">primary :5432</text>
+<rect class="vd-node-tag-pill" x="710" y="270" width="90" height="16" rx="8"/>
+<text x="755" y="281.5" font-size="10" class="vd-node-tag" text-anchor="middle">OAI protected</text>
+</g>
+<g class="vd-node vd-t-database" id="vd-node-cache" data-label="Redis">
+<rect class="vd-node-box" x="470" y="140" width="130" height="60" rx="10"/>
+<text x="535" y="167" font-size="14" class="vd-node-label" text-anchor="middle">Redis</text>
+<text x="535" y="184" font-size="11" class="vd-node-sub" text-anchor="middle">read-through</text>
+</g>
+<g class="vd-legend">
+<rect class="vd-legend-swatch vd-t-backend" x="40" y="410" width="12" height="12" rx="3"/>
+<text x="58" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Backend</text>
+<rect class="vd-legend-swatch vd-t-database" x="124.2" y="410" width="12" height="12" rx="3"/>
+<text x="142.2" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Database</text>
+<rect class="vd-legend-swatch vd-t-cloud" x="215" y="410" width="12" height="12" rx="3"/>
+<text x="233" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Cloud</text>
+<rect class="vd-legend-swatch vd-t-external" x="286" y="410" width="12" height="12" rx="3"/>
+<text x="304" y="420" font-size="11" class="vd-legend-label" text-anchor="start">External</text>
+<line class="vd-legend-line vd-v-default" x1="376.8" y1="416" x2="390.8" y2="416"/>
+<text x="394.8" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Default link</text>
+<line class="vd-legend-line vd-v-emphasis" x1="494" y1="416" x2="508" y2="416"/>
+<text x="512" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Emphasis link</text>
+</g>
+</g>
+</svg>
+</main>
+<section class="vd-cards">
+<h2>ノート</h2>
+<article>
+<h3><span class="vd-dot vd-dot-cyan"></span>Edge</h3>
+<ul>
+<li>CloudFront が全トラフィックの前段</li>
+<li>静的配信は OAI 経由</li>
+</ul>
+</article>
+<article>
+<h3><span class="vd-dot vd-dot-green"></span>Persistence</h3>
+<ul>
+<li>PostgreSQL がプライマリストア</li>
+<li>Redis は read-through キャッシュ</li>
+</ul>
+</article>
+</section>
+<script type="application/json" id="vd-data">{"schema_version":1,"diagram_type":"architecture","meta":{"title":"Sample Web App","output":"web-app-rendered.html","quality_profile":"showcase","locale":"ja","views":[{"id":"request-path","label":"Primary request path","focus":["users","cdn","api","db"],"note":"エッジから永続化まで主要リクエストを追う"}]},"components":[{"id":"users","type":"external","label":"Users","sublabel":"Browser / Mobile","pos":[40,290],"size":[120,60]},{"id":"cdn","type":"cloud","label":"CloudFront","sublabel":"edge cache","pos":[250,290],"size":[130,60]},{"id":"api","type":"backend","label":"API Server","sublabel":"FastAPI :8000","pos":[470,290],"size":[130,60]},{"id":"db","type":"database","label":"PostgreSQL","sublabel":"primary :5432","tag":"OAI protected","pos":[690,290],"size":[130,60]},{"id":"cache","type":"database","label":"Redis","sublabel":"read-through","pos":[470,140],"size":[130,60]}],"boundaries":[{"kind":"region","label":"AWS Region: us-west-2","wraps":["api","db","cache"]}],"connections":[{"id":"users-to-cdn","from":"users","to":"cdn","label":"HTTPS","variant":"emphasis"},{"id":"cdn-to-api","from":"cdn","to":"api","label":"forward"},{"id":"api-sql","from":"api","to":"db","label":"SQL","fromSide":"right","toSide":"left"},{"id":"api-cache","from":"api","to":"cache","label":"GET/SET","fromSide":"top","toSide":"bottom"}],"cards":[{"dot":"cyan","title":"Edge","items":["CloudFront が全トラフィックの前段","静的配信は OAI 経由"]},{"dot":"green","title":"Persistence","items":["PostgreSQL がプライマリストア","Redis は read-through キャッシュ"]}]}</script>
+<script>/* veduta viewer — 完全オフラインで動作する最小ビューア。
+ * 禁止事項 (CI で grep 検証): DOM 文字列注入 API・動的コード実行・location への代入。
+ * DOM 構築は createElement + textContent のみ。 */
+(function () {
+  "use strict";
+
+  var svg = document.querySelector(".vd-svg");
+  if (!svg) { return; }
+
+  /* ---- 埋め込み IR データ (application/json はスクリプトとして実行されない) ---- */
+  var data = null;
+  try {
+    var dataEl = document.getElementById("vd-data");
+    if (dataEl) { data = JSON.parse(dataEl.textContent); }
+  } catch (e) { data = null; }
+
+  var knownIds = Object.create(null);
+  if (data && Array.isArray(data.components)) {
+    for (var i = 0; i < data.components.length; i++) {
+      var c = data.components[i];
+      if (c && typeof c.id === "string") { knownIds[c.id] = true; }
+    }
+  }
+
+  /* ---- pan / zoom: viewBox を直接操作する ---- */
+  var vb0 = (svg.getAttribute("viewBox") || "0 0 100 100").split(/\s+/).map(Number);
+  var vb = vb0.slice();
+
+  function applyViewBox() {
+    svg.setAttribute("viewBox", vb.join(" "));
+  }
+
+  var stage = document.querySelector(".vd-stage") || svg;
+  var panning = false;
+  var lastX = 0, lastY = 0;
+
+  function unitsPerPixel() {
+    var r = svg.getBoundingClientRect();
+    if (r.width <= 0) { return 1; }
+    return vb[2] / r.width;
+  }
+
+  stage.addEventListener("pointerdown", function (ev) {
+    panning = true;
+    lastX = ev.clientX;
+    lastY = ev.clientY;
+    stage.classList.add("vd-panning");
+    if (stage.setPointerCapture) { stage.setPointerCapture(ev.pointerId); }
+  });
+  stage.addEventListener("pointermove", function (ev) {
+    if (!panning) { return; }
+    var k = unitsPerPixel();
+    vb[0] -= (ev.clientX - lastX) * k;
+    vb[1] -= (ev.clientY - lastY) * k;
+    lastX = ev.clientX;
+    lastY = ev.clientY;
+    applyViewBox();
+  });
+  function endPan() {
+    panning = false;
+    stage.classList.remove("vd-panning");
+  }
+  stage.addEventListener("pointerup", endPan);
+  stage.addEventListener("pointercancel", endPan);
+
+  stage.addEventListener("wheel", function (ev) {
+    ev.preventDefault();
+    var r = svg.getBoundingClientRect();
+    var px = (ev.clientX - r.left) / r.width;
+    var py = (ev.clientY - r.top) / r.height;
+    var factor = ev.deltaY > 0 ? 1.12 : 1 / 1.12;
+    var nw = vb[2] * factor;
+    var nh = vb[3] * factor;
+    if (nw < vb0[2] / 40 || nw > vb0[2] * 40) { return; }
+    vb[0] += (vb[2] - nw) * px;
+    vb[1] += (vb[3] - nh) * py;
+    vb[2] = nw;
+    vb[3] = nh;
+    applyViewBox();
+  }, { passive: false });
+
+  var resetBtn = document.getElementById("vd-reset");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      vb = vb0.slice();
+      applyViewBox();
+    });
+  }
+
+  /* ---- テーマ切替 ---- */
+  var themeBtn = document.getElementById("vd-theme");
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-theme") || "";
+  }
+  function setTheme(t) {
+    if (t === "dark" || t === "light") {
+      document.documentElement.setAttribute("data-theme", t);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    try { localStorage.setItem("vd-theme", t); } catch (e) { /* 保存不可でも動作継続 */ }
+  }
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      var cur = currentTheme();
+      var prefersDark = false;
+      try { prefersDark = matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { /* noop */ }
+      var effectiveDark = cur === "dark" || (cur === "" && prefersDark);
+      setTheme(effectiveDark ? "light" : "dark");
+    });
+  }
+  try {
+    var saved = localStorage.getItem("vd-theme");
+    if (saved === "dark" || saved === "light") { setTheme(saved); }
+  } catch (e) { /* noop */ }
+
+  /* ---- ノード検索 ---- */
+  var nodes = document.querySelectorAll(".vd-node");
+  function clearMarks() {
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].classList.remove("vd-dim");
+      nodes[i].classList.remove("vd-hit");
+    }
+  }
+  var searchEl = document.getElementById("vd-search");
+  if (searchEl) {
+    searchEl.addEventListener("input", function () {
+      var q = searchEl.value.trim().toLowerCase();
+      if (q === "") { clearMarks(); return; }
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        var label = (el.getAttribute("data-label") || "").toLowerCase();
+        var id = (el.id || "").replace(/^vd-node-/, "").toLowerCase();
+        if (label.indexOf(q) >= 0 || id.indexOf(q) >= 0) {
+          el.classList.add("vd-hit");
+          el.classList.remove("vd-dim");
+        } else {
+          el.classList.add("vd-dim");
+          el.classList.remove("vd-hit");
+        }
+      }
+    });
+  }
+
+  /* ---- ディープリンク (#focus=node-id) ----
+   * location.hash は攻撃者が制御できる。許可文字にマッチさせ、
+   * 既知のノード ID と照合してから使う。マッチしなければ黙って無視する。 */
+  function applyHashFocus() {
+    var h = location.hash || "";
+    var m = /^#focus=([A-Za-z0-9][A-Za-z0-9_-]{0,63})$/.exec(h);
+    if (!m) { return; }
+    var id = m[1];
+    if (!knownIds[id]) { return; }
+    var el = document.getElementById("vd-node-" + id);
+    if (!el) { return; }
+    clearMarks();
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i] !== el) { nodes[i].classList.add("vd-dim"); }
+    }
+    el.classList.add("vd-hit");
+  }
+  window.addEventListener("hashchange", applyHashFocus);
+  applyHashFocus();
+})();
+</script>
+</body>
+</html>
