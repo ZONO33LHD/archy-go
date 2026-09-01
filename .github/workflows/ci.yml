@@ -1,0 +1,87 @@
+# veduta CI (§14)
+#
+# 検証項目:
+#   - go.mod の go / toolchain ディレクティブと実際のツールチェーンが Go 1.27 で一致
+#   - 依存が標準ライブラリのみ (go list -deps)
+#   - GOEXPERIMENT に nojsonv2 が含まれない
+#   - gofmt / go vet (stdversion チェック含む) / govulncheck
+#   - go generate 再実行で差分が出ない (スキーマ・文字幅テーブルの同期)
+#   - 埋め込みアセット・文字幅テーブルの SHA-256 (テスト内で検証)
+#   - セキュリティ回帰テスト・決定論テスト (go test)
+#   - 短時間ファジング
+#   - linux / darwin の 2 OS で同一入力から同一出力が出る
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.0"
+      - name: Go ツールチェーンが 1.27.0 に固定されていることを検証
+        run: |
+          # 実ツールチェーンと go.mod の go ディレクティブを検証する。
+          # toolchain 行は `go mod tidy` が go ディレクティブと一致するとき省くため、
+          # 存在すれば一致を要求し、無ければ go ディレクティブ + GOVERSION で固定を保証する。
+          go version | grep -F "go1.27.0"
+          [ "$(go env GOVERSION)" = "go1.27.0" ]
+          grep -E '^go 1\.27\.0$' go.mod
+          if grep -q '^toolchain ' go.mod; then
+            grep -E '^toolchain go1\.27\.0$' go.mod
+          fi
+      - name: GOEXPERIMENT の検証
+        run: |
+          case ":${GOEXPERIMENT:-}:" in
+            *nojsonv2*) echo "GOEXPERIMENT=nojsonv2 は禁止 (§10.1)"; exit 1;;
+          esac
+      - name: 依存の検証 (標準ライブラリのみ)
+        run: make deps-check
+      - name: フォーマット・静的解析
+        run: make lint
+      - name: go generate の同期検証
+        run: make generate-check
+      - name: テスト (race + セキュリティ回帰 + 決定論)
+        run: make test
+      - name: govulncheck
+        run: |
+          # 再現性のためバージョンを固定する (@latest は実行ごとに変動しうる)。
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...
+      - name: 短時間ファジング
+        run: |
+          go test -fuzz='FuzzParseIR$' -fuzztime=20s ./internal/ir
+          go test -fuzz='FuzzTextUnits$' -fuzztime=20s ./internal/render/shared
+          go test -fuzz='FuzzOutputPath$' -fuzztime=20s ./internal/outpath
+          go test -fuzz='FuzzRoute$' -fuzztime=20s ./internal/geometry
+      - name: クロス OS 決定論 — 成果物ハッシュを出力
+        run: |
+          make build VERSION=ci
+          mkdir -p /tmp/vd && cd /tmp/vd
+          cp "$GITHUB_WORKSPACE/assets/examples/architecture-web-app.json" .
+          VEDUTA_NO_OPEN=1 "$GITHUB_WORKSPACE/bin/veduta" render architecture architecture-web-app.json out.html
+          shasum -a 256 out.html | awk '{print $1}' > "$GITHUB_WORKSPACE/render-hash-${{ matrix.os }}.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: render-hash-${{ matrix.os }}
+          path: render-hash-${{ matrix.os }}.txt
+
+  cross-os-determinism:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: render-hash-*
+          merge-multiple: true
+      - name: 2 OS のレンダリング結果が同一であることを検証
+        run: |
+          cat render-hash-*.txt
+          [ "$(sort -u render-hash-*.txt | wc -l)" -eq 1 ]

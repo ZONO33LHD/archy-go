@@ -1,0 +1,10 @@
+# 決定論性: 埋め込みアセットは常に LF で扱う。
+# core.autocrlf 等で CRLF 化されると、同じ入力から出る HTML のバイトが変わり
+# ゴールデンファイル・CSP ハッシュ・deliver レシートが壊れる (§9)。
+* text=auto eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.go text eol=lf
+*.golden.html text eol=lf
