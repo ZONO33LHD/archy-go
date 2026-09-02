@@ -12,25 +12,32 @@ import (
 	"github.com/ZONO33LHD/archy-go/internal/render"
 )
 
-// CheckName は receipt に載せる構図検査の名前一覧 (実行順)。
-var CheckNames = []string{
-	"node-overlap",
-	"text-overflow",
-	"boundary-containment",
-	"viewbox-fit",
-	"edge-through-node",
-	"label-collision",
-	"path-quality",
-	"port-spacing",
-	"legend-consistency",
+// checkSpec は 1 つの構図検査の定義。名前・standard プロファイルで走るか・検査関数を束ねる。
+// これが検査一覧と実行順の単一の真実の源であり、名前と実行の二重管理を避ける。
+type checkSpec struct {
+	name     string
+	standard bool // standard プロファイルでも実行するか (false は showcase 専用)
+	fn       func(l *render.Layout, layoutDiags diag.List, ds *diag.List)
 }
 
-// standardChecks は standard プロファイルで実行する基本チェック。
-var standardChecks = map[string]bool{
-	"node-overlap":         true,
-	"text-overflow":        true,
-	"boundary-containment": true,
-	"viewbox-fit":          true,
+// checkSpecs は全構図検査 (実行順)。
+var checkSpecs = []checkSpec{
+	{"node-overlap", true, func(l *render.Layout, _ diag.List, ds *diag.List) { checkNodeOverlap(l, ds) }},
+	{"text-overflow", true, func(_ *render.Layout, layoutDiags diag.List, ds *diag.List) {
+		for _, d := range layoutDiags {
+			if d.Code == "composition/text-overflow" {
+				diag.Append(ds, d)
+			}
+		}
+	}},
+	{"boundary-containment", true, func(l *render.Layout, _ diag.List, ds *diag.List) { checkBoundaryContainment(l, ds) }},
+	{"viewbox-fit", true, func(l *render.Layout, _ diag.List, ds *diag.List) { checkViewBoxFit(l, ds) }},
+	{"edge-through-node", false, func(l *render.Layout, _ diag.List, ds *diag.List) { checkEdgeThroughNode(l, ds) }},
+	{"edge-crossing", false, func(l *render.Layout, _ diag.List, ds *diag.List) { checkEdgeCrossing(l, ds) }},
+	{"label-collision", false, func(l *render.Layout, _ diag.List, ds *diag.List) { checkLabelCollision(l, ds) }},
+	{"path-quality", false, func(l *render.Layout, _ diag.List, ds *diag.List) { checkPathQuality(l, ds) }},
+	{"port-spacing", false, func(l *render.Layout, _ diag.List, ds *diag.List) { checkPortSpacing(l, ds) }},
+	{"legend-consistency", false, func(l *render.Layout, _ diag.List, ds *diag.List) { checkLegendConsistency(l, ds) }},
 }
 
 // CheckResult は 1 チェックの実行結果。
@@ -49,34 +56,18 @@ type CheckResult struct {
 func Composition(l *render.Layout, layoutDiags diag.List, profile string, runAll bool) (diag.List, []CheckResult) {
 	showcase := profile == "showcase" || runAll
 	var ds diag.List
-	var results []CheckResult
+	results := make([]CheckResult, 0, len(checkSpecs))
 
-	run := func(name string, fn func(*diag.List)) {
-		res := CheckResult{Name: name}
-		if showcase || standardChecks[name] {
+	for _, spec := range checkSpecs {
+		res := CheckResult{Name: spec.name}
+		if showcase || spec.standard {
 			res.Ran = true
 			before := len(ds)
-			fn(&ds)
+			spec.fn(l, layoutDiags, &ds)
 			res.Issues = len(ds) - before
 		}
 		results = append(results, res)
 	}
-
-	run("node-overlap", func(out *diag.List) { checkNodeOverlap(l, out) })
-	run("text-overflow", func(out *diag.List) {
-		for _, d := range layoutDiags {
-			if d.Code == "composition/text-overflow" {
-				*out = append(*out, d)
-			}
-		}
-	})
-	run("boundary-containment", func(out *diag.List) { checkBoundaryContainment(l, out) })
-	run("viewbox-fit", func(out *diag.List) { checkViewBoxFit(l, out) })
-	run("edge-through-node", func(out *diag.List) { checkEdgeThroughNode(l, out) })
-	run("label-collision", func(out *diag.List) { checkLabelCollision(l, out) })
-	run("path-quality", func(out *diag.List) { checkPathQuality(l, out) })
-	run("port-spacing", func(out *diag.List) { checkPortSpacing(l, out) })
-	run("legend-consistency", func(out *diag.List) { checkLegendConsistency(l, out) })
 
 	// text-overflow 以外のレイアウト診断 (route-truncated 等) も合流させる。
 	for _, d := range layoutDiags {
@@ -87,27 +78,61 @@ func Composition(l *render.Layout, layoutDiags diag.List, profile string, runAll
 	return ds, results
 }
 
-// checkNodeOverlap はコンポーネント矩形同士の重なりを検査する。
+// paintedNodeRect は実際に描画されるノード関連の矩形 (本体 + ノード外に出るタグピル)。
+type paintedNodeRect struct {
+	ownerID string
+	kind    string // "box" | "tag"
+	rect    geometry.Rect
+}
+
+// paintedNodeRects は全ノードの本体矩形とタグピル矩形を列挙する。
+// タグはノードの外 (上方) に描かれるため、重なり検査では本体と同格に扱う必要がある。
+func paintedNodeRects(l *render.Layout) []paintedNodeRect {
+	out := make([]paintedNodeRect, 0, len(l.Nodes))
+	for _, n := range l.Nodes {
+		out = append(out, paintedNodeRect{ownerID: n.ID, kind: "box", rect: n.Rect})
+		if n.HasTag {
+			out = append(out, paintedNodeRect{ownerID: n.ID, kind: "tag", rect: n.TagRect})
+		}
+	}
+	return out
+}
+
+// checkNodeOverlap はコンポーネントの描画矩形同士の重なりを検査する。
+// 本体だけでなくノード外に出るタグピルも対象に含める (別ノードのタグ・本体との重なりを見逃さない)。
 func checkNodeOverlap(l *render.Layout, ds *diag.List) {
-	for i := 0; i < len(l.Nodes); i++ {
+	painted := paintedNodeRects(l)
+	for i := range painted {
 		if ds.AtCap() {
 			return
 		}
-		for j := i + 1; j < len(l.Nodes); j++ {
-			a, b := l.Nodes[i], l.Nodes[j]
-			if a.Rect.Overlaps(b.Rect, 0) {
-				d := diag.Error("composition/node-overlap", fmt.Sprintf("/components/%d", j),
-					fmt.Sprintf("component '%s' と '%s' の矩形が重なっています", a.ID, b.ID),
+		for j := i + 1; j < len(painted); j++ {
+			a, b := painted[i], painted[j]
+			if a.ownerID == b.ownerID {
+				continue // 同一ノードの本体とタグは重なってよい
+			}
+			if a.rect.Overlaps(b.rect, 0) {
+				d := diag.Error("composition/node-overlap", "",
+					fmt.Sprintf("component '%s' の%sと '%s' の%sが重なっています",
+						a.ownerID, paintKindLabel(a.kind), b.ownerID, paintKindLabel(b.kind)),
 					"pos を調整して重なりを解消する",
-					"size を縮小して間隔を確保する")
-				d.Subject = &diag.Subject{Surface: "component", ID: b.ID}
+					"size を縮小して間隔を確保する",
+					"タグ (tag) の文言を短くする")
+				d.Subject = &diag.Subject{Surface: "component", ID: b.ownerID}
 				d.Evidence = map[string]any{
-					"a": rectEvidence(a.Rect), "b": rectEvidence(b.Rect), "conflictsWith": a.ID,
+					"a": rectEvidence(a.rect), "b": rectEvidence(b.rect), "conflictsWith": a.ownerID,
 				}
 				diag.Append(ds, d)
 			}
 		}
 	}
+}
+
+func paintKindLabel(kind string) string {
+	if kind == "tag" {
+		return "タグ"
+	}
+	return "矩形"
 }
 
 func rectEvidence(r geometry.Rect) []float64 {
@@ -197,21 +222,45 @@ func checkViewBoxFit(l *render.Layout, ds *diag.List) {
 	}
 }
 
-// checkEdgeThroughNode は辺が無関係な不透明ノードを貫通していないかを検査する。
+// checkEdgeThroughNode は辺がノードを不正に貫通していないかを検査する。
+//
+//   - 無関係なノード: どのセグメントも貫通してはならない。
+//   - 端点ノード (from / to): 最初と最後のセグメント (ポートから出る/入るスタブ) 以外は
+//     貫通してはならない。via/channel が経路を端点ノードへ逆流させると、経路がノードの下へ
+//     潜って反対側から再出現する破綻が起きる。従来は端点ノードを一律除外していたため
+//     showcase でも見逃していた (レビュー指摘)。
 func checkEdgeThroughNode(l *render.Layout, ds *diag.List) {
+	nodeByID := make(map[string]geometry.Rect, len(l.Nodes))
+	for _, n := range l.Nodes {
+		nodeByID[n.ID] = n.Rect
+	}
 	for _, e := range l.Edges {
 		if ds.AtCap() {
 			return
 		}
+		endpointRects := map[string]geometry.Rect{}
+		if r, ok := nodeByID[e.From]; ok {
+			endpointRects[e.From] = r
+		}
+		if r, ok := nodeByID[e.To]; ok {
+			endpointRects[e.To] = r
+		}
+		nSeg := len(e.Points) - 1
 		for _, n := range l.Nodes {
-			if n.ID == e.From || n.ID == e.To {
-				continue
-			}
+			isEndpoint := n.ID == e.From || n.ID == e.To
 			for i := 1; i < len(e.Points); i++ {
+				// 端点ノードでは最初 (i==1) と最後 (i==nSeg) のスタブは正当な出入りなので除外する。
+				if isEndpoint && (i == 1 || i == nSeg) {
+					continue
+				}
 				if geometry.SegIntersectsRect(e.Points[i-1], e.Points[i], n.Rect, 0) {
-					d := diag.Error("composition/edge-through-node", "",
-						fmt.Sprintf("接続 '%s' が無関係な component '%s' を貫通しています", e.ID, n.ID),
+					msg := fmt.Sprintf("接続 '%s' が無関係な component '%s' を貫通しています", e.ID, n.ID)
+					if isEndpoint {
+						msg = fmt.Sprintf("接続 '%s' の経路が端点 component '%s' に再侵入しています", e.ID, n.ID)
+					}
+					d := diag.Error("composition/edge-through-node", "", msg,
 						"via で経路を明示して迂回させる",
+						"via の中継点が端点ノードの内側や逆側に来ないよう調整する",
 						"component の pos を移動して経路を空ける")
 					d.Subject = &diag.Subject{Surface: "connection", ID: e.ID}
 					d.Evidence = map[string]any{"node": rectEvidence(n.Rect), "conflictsWith": n.ID}
@@ -221,6 +270,73 @@ func checkEdgeThroughNode(l *render.Layout, ds *diag.List) {
 			}
 		}
 	}
+}
+
+// checkEdgeCrossing は無関係な辺同士の交差・重複を検査する (showcase warning)。
+// 共有ポート (同じノードに接続する辺) は正当に近接しうるため、端点ノードを共有する
+// ペアは対象外とする。交差は bridge/jump 表現を持たないため、可能なら避けるべき。
+func checkEdgeCrossing(l *render.Layout, ds *diag.List) {
+	for i := 0; i < len(l.Edges); i++ {
+		if ds.AtCap() {
+			return
+		}
+		for j := i + 1; j < len(l.Edges); j++ {
+			a, b := l.Edges[i], l.Edges[j]
+			if sharesEndpoint(a, b) {
+				continue
+			}
+			if pt, ok := firstSegmentCrossing(a.Points, b.Points); ok {
+				d := diag.Warning("composition/edge-crossing", "",
+					fmt.Sprintf("接続 '%s' と '%s' が交差しています (交点付近で線の追跡が困難になります)", a.ID, b.ID),
+					"どちらかを via で迂回させて交差を避ける",
+					"ノード配置を見直して経路が重ならないようにする")
+				d.Subject = &diag.Subject{Surface: "connection", ID: a.ID}
+				d.Evidence = map[string]any{"at": []float64{pt.X, pt.Y}, "conflictsWith": b.ID}
+				diag.Append(ds, d)
+			}
+		}
+	}
+}
+
+// sharesEndpoint は 2 辺が端点ノードを共有するか。
+func sharesEndpoint(a, b render.Edge) bool {
+	return a.From == b.From || a.From == b.To || a.To == b.From || a.To == b.To
+}
+
+// firstSegmentCrossing は 2 つの折れ線が交差する最初の点を返す (軸平行セグメント前提)。
+func firstSegmentCrossing(a, b []geometry.Point) (geometry.Point, bool) {
+	for i := 1; i < len(a); i++ {
+		for j := 1; j < len(b); j++ {
+			if pt, ok := orthoSegCross(a[i-1], a[i], b[j-1], b[j]); ok {
+				return pt, true
+			}
+		}
+	}
+	return geometry.Point{}, false
+}
+
+// orthoSegCross は軸平行な 2 セグメント (一方が水平、一方が垂直) の交点を返す。
+// 平行なセグメント同士は交差なし扱い (端点接触は交差としない)。
+func orthoSegCross(a1, a2, b1, b2 geometry.Point) (geometry.Point, bool) {
+	aH := a1.Y == a2.Y
+	bH := b1.Y == b2.Y
+	if aH == bH {
+		return geometry.Point{}, false // 同方向は判定しない (重複は稀で描画上も許容)
+	}
+	// a を水平、b を垂直に正規化する。
+	h1, h2, v1, v2 := a1, a2, b1, b2
+	if !aH {
+		h1, h2, v1, v2 = b1, b2, a1, a2
+	}
+	y := h1.Y
+	x := v1.X
+	minHX, maxHX := min(h1.X, h2.X), max(h1.X, h2.X)
+	minVY, maxVY := min(v1.Y, v2.Y), max(v1.Y, v2.Y)
+	// 端点での接触 (T 字・角) は交差としない。厳密内部での交差のみ。
+	if x > minHX && x < maxHX && y > minVY && y < maxVY {
+		return geometry.Point{X: x, Y: y}, true
+	}
+	return geometry.Point{}, false
 }
 
 // checkLabelCollision は関係ラベルのマスク矩形の衝突を検査する。
