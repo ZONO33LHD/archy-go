@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-G3VuHhdJtz4WfJajhrn0nVYCRQkvabqs1IUX2jmUVWQ='; style-src 'sha256-msymrkKkB8WYYqKeDJjTNw1jAL+P3C+2Ughb5zLto5I='; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-vV+hoBRaZ/ePU+rs4nrKVtwU/oJvxkBvserEt53pOSU='; style-src 'sha256-GhDIcrhCko8wpoknpzQoAAvZfwdkyP1kmEvkYAbUsuQ='; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <title>Sample Web App</title>
 <style>:root {
   --vd-bg: oklch(97.5% 0.005 250);
   --vd-surface: oklch(100% 0 0);
   --vd-text: oklch(22% 0.02 255);
-  --vd-text-dim: oklch(45% 0.02 255);
-  --vd-border: oklch(88% 0.01 250);
-  --vd-accent: oklch(58% 0.17 250);
-  --vd-edge: oklch(52% 0.03 255);
-  --vd-edge-emphasis: oklch(56% 0.19 250);
-  --vd-edge-security: oklch(55% 0.16 25);
-  --vd-boundary: oklch(60% 0.05 250);
+  --vd-text-dim: oklch(42% 0.02 255);
+  --vd-border: oklch(78% 0.015 250);
+  --vd-accent: oklch(50% 0.19 250);
+  --vd-edge: oklch(50% 0.03 255);
+  --vd-edge-emphasis: oklch(52% 0.2 250);
+  --vd-edge-security: oklch(50% 0.18 25);
+  --vd-boundary: oklch(48% 0.06 255);
   --vd-t-frontend: oklch(93% 0.05 250);
   --vd-t-frontend-line: oklch(55% 0.15 250);
   --vd-t-backend: oklch(93% 0.05 150);
@@ -159,9 +159,13 @@ main.vd-stage {
   flex: 1;
   overflow: hidden;
   cursor: grab;
-  touch-action: none;
+  touch-action: pinch-zoom;
 }
 main.vd-stage.vd-panning { cursor: grabbing; }
+main.vd-stage:focus-visible { outline: 2px solid var(--vd-accent); outline-offset: -2px; }
+.vd-search-status { font-size: 12px; color: var(--vd-text-dim); min-width: 4em; }
+.vd-zoom { display: inline-flex; gap: 2px; }
+.vd-zoom button { min-width: 2em; font-weight: 600; }
 .vd-svg {
   width: 100%;
   height: calc(100vh - 54px);
@@ -186,8 +190,23 @@ main.vd-stage.vd-panning { cursor: grabbing; }
 .vd-node-tag-pill { fill: var(--vd-highlight); stroke: none; }
 .vd-node-tag { fill: var(--vd-text); font-weight: 600; }
 
-.vd-node.vd-dim { opacity: 0.25; }
+.vd-node-glyph-bg { fill: var(--vd-surface); stroke-width: 1.5; }
+.vd-node-glyph { fill: var(--vd-text); font-weight: 700; font-family: var(--vd-mono); }
+.vd-t-frontend .vd-node-glyph-bg { stroke: var(--vd-t-frontend-line); }
+.vd-t-backend .vd-node-glyph-bg { stroke: var(--vd-t-backend-line); }
+.vd-t-database .vd-node-glyph-bg { stroke: var(--vd-t-database-line); }
+.vd-t-cloud .vd-node-glyph-bg { stroke: var(--vd-t-cloud-line); }
+.vd-t-security .vd-node-glyph-bg { stroke: var(--vd-t-security-line); }
+.vd-t-messagebus .vd-node-glyph-bg { stroke: var(--vd-t-messagebus-line); }
+.vd-t-external .vd-node-glyph-bg { stroke: var(--vd-t-external-line); }
+.vd-t-database .vd-node-box { stroke-width: 2.4; }
+.vd-legend-glyph { fill: var(--vd-text); font-weight: 700; font-family: var(--vd-mono); }
+
+.vd-node.vd-dim { opacity: 0.22; }
 .vd-node.vd-hit .vd-node-box { stroke: var(--vd-accent); stroke-width: 3; }
+.vd-edge-group.vd-dim { opacity: 0.15; }
+.vd-edge-group.vd-hit .vd-edge { stroke-width: 3; }
+.vd-boundary.vd-dim { opacity: 0.3; }
 
 .vd-edge { fill: none; stroke: var(--vd-edge); stroke-width: 1.6; }
 .vd-edge.vd-v-emphasis { stroke: var(--vd-edge-emphasis); stroke-width: 2.4; }
@@ -260,12 +279,19 @@ section.vd-cards {
   <h1 class="vd-title">Sample Web App</h1>
   <div class="vd-controls">
     <input id="vd-search" type="search" placeholder="ノードを検索" aria-label="ノードを検索">
+    <span id="vd-search-status" class="vd-search-status" role="status" aria-live="polite"></span>
+    <div class="vd-zoom" role="group" aria-label="ズーム">
+      <button id="vd-zoom-out" type="button" aria-label="縮小">&minus;</button>
+      <button id="vd-zoom-in" type="button" aria-label="拡大">+</button>
+    </div>
     <button id="vd-reset" type="button">表示をリセット</button>
-    <button id="vd-theme" type="button">テーマ</button>
+    <button id="vd-theme" type="button" aria-pressed="false">テーマ</button>
   </div>
 </header>
-<main class="vd-stage">
-<svg class="vd-svg" xmlns="http://www.w3.org/2000/svg" viewBox="16 74 848 376" role="img" aria-label="Sample Web App">
+<main class="vd-stage" tabindex="0" role="application" aria-label="図キャンバス (ドラッグでパン、Ctrl+ホイールまたはピンチでズーム、矢印キーで移動)">
+<svg class="vd-svg" xmlns="http://www.w3.org/2000/svg" viewBox="16 74 848 378" role="img" aria-labelledby="vd-svg-title vd-svg-desc" tabindex="0">
+<title id="vd-svg-title">Sample Web App</title>
+<desc id="vd-svg-desc">5 components (1 Backend, 2 Database, 1 Cloud, 1 External), 4 connections, 1 boundaries.</desc>
 <defs>
 <marker id="vd-arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" class="vd-arrowhead vd-v-default"/></marker>
 <marker id="vd-arrow-emphasis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" class="vd-arrowhead vd-v-emphasis"/></marker>
@@ -297,46 +323,72 @@ section.vd-cards {
 <rect class="vd-edge-label-mask" x="506.9" y="224" width="56.2" height="18" rx="4"/>
 <text x="535" y="236.85" font-size="11" class="vd-edge-label" text-anchor="middle">GET/SET</text>
 </g>
-<g class="vd-node vd-t-external" id="vd-node-users" data-label="Users">
+<g class="vd-node vd-t-external" id="vd-node-users" role="group" aria-label="External: Users" data-label="Users">
 <rect class="vd-node-box" x="40" y="290" width="120" height="60" rx="10"/>
 <text x="100" y="317" font-size="14" class="vd-node-label" text-anchor="middle">Users</text>
 <text x="100" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">Browser / Mobile</text>
+<circle class="vd-node-glyph-bg" cx="52" cy="302" r="8"/>
+<text x="52" y="305" font-size="9" class="vd-node-glyph" text-anchor="middle">E</text>
 </g>
-<g class="vd-node vd-t-cloud" id="vd-node-cdn" data-label="CloudFront">
+<g class="vd-node vd-t-cloud" id="vd-node-cdn" role="group" aria-label="Cloud: CloudFront" data-label="CloudFront">
 <rect class="vd-node-box" x="250" y="290" width="130" height="60" rx="10"/>
 <text x="315" y="317" font-size="14" class="vd-node-label" text-anchor="middle">CloudFront</text>
 <text x="315" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">edge cache</text>
+<circle class="vd-node-glyph-bg" cx="262" cy="302" r="8"/>
+<text x="262" y="305" font-size="9" class="vd-node-glyph" text-anchor="middle">C</text>
 </g>
-<g class="vd-node vd-t-backend" id="vd-node-api" data-label="API Server">
+<g class="vd-node vd-t-backend" id="vd-node-api" role="group" aria-label="Backend: API Server" data-label="API Server">
 <rect class="vd-node-box" x="470" y="290" width="130" height="60" rx="10"/>
 <text x="535" y="317" font-size="14" class="vd-node-label" text-anchor="middle">API Server</text>
 <text x="535" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">FastAPI :8000</text>
+<circle class="vd-node-glyph-bg" cx="482" cy="302" r="8"/>
+<text x="482" y="305" font-size="9" class="vd-node-glyph" text-anchor="middle">B</text>
 </g>
-<g class="vd-node vd-t-database" id="vd-node-db" data-label="PostgreSQL">
+<g class="vd-node vd-t-database" id="vd-node-db" role="group" aria-label="Database: PostgreSQL" data-label="PostgreSQL">
 <rect class="vd-node-box" x="690" y="290" width="130" height="60" rx="10"/>
 <text x="755" y="317" font-size="14" class="vd-node-label" text-anchor="middle">PostgreSQL</text>
 <text x="755" y="334" font-size="11" class="vd-node-sub" text-anchor="middle">primary :5432</text>
+<circle class="vd-node-glyph-bg" cx="702" cy="302" r="8"/>
+<text x="702" y="305" font-size="9" class="vd-node-glyph" text-anchor="middle">D</text>
 <rect class="vd-node-tag-pill" x="710" y="270" width="90" height="16" rx="8"/>
 <text x="755" y="281.5" font-size="10" class="vd-node-tag" text-anchor="middle">OAI protected</text>
 </g>
-<g class="vd-node vd-t-database" id="vd-node-cache" data-label="Redis">
+<g class="vd-node vd-t-database" id="vd-node-cache" role="group" aria-label="Database: Redis" data-label="Redis">
 <rect class="vd-node-box" x="470" y="140" width="130" height="60" rx="10"/>
 <text x="535" y="167" font-size="14" class="vd-node-label" text-anchor="middle">Redis</text>
 <text x="535" y="184" font-size="11" class="vd-node-sub" text-anchor="middle">read-through</text>
+<circle class="vd-node-glyph-bg" cx="482" cy="152" r="8"/>
+<text x="482" y="155" font-size="9" class="vd-node-glyph" text-anchor="middle">D</text>
 </g>
-<g class="vd-legend">
-<rect class="vd-legend-swatch vd-t-backend" x="40" y="410" width="12" height="12" rx="3"/>
+<g class="vd-legend" role="list" aria-label="Legend">
+<g role="listitem" aria-label="Backend">
+<rect class="vd-legend-swatch vd-t-backend" x="40" y="410" width="14" height="14" rx="3"/>
+<text x="47" y="421" font-size="9" class="vd-legend-glyph" text-anchor="middle">B</text>
 <text x="58" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Backend</text>
-<rect class="vd-legend-swatch vd-t-database" x="124.2" y="410" width="12" height="12" rx="3"/>
+</g>
+<g role="listitem" aria-label="Database">
+<rect class="vd-legend-swatch vd-t-database" x="124.2" y="410" width="14" height="14" rx="3"/>
+<text x="131.2" y="421" font-size="9" class="vd-legend-glyph" text-anchor="middle">D</text>
 <text x="142.2" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Database</text>
-<rect class="vd-legend-swatch vd-t-cloud" x="215" y="410" width="12" height="12" rx="3"/>
+</g>
+<g role="listitem" aria-label="Cloud">
+<rect class="vd-legend-swatch vd-t-cloud" x="215" y="410" width="14" height="14" rx="3"/>
+<text x="222" y="421" font-size="9" class="vd-legend-glyph" text-anchor="middle">C</text>
 <text x="233" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Cloud</text>
-<rect class="vd-legend-swatch vd-t-external" x="286" y="410" width="12" height="12" rx="3"/>
+</g>
+<g role="listitem" aria-label="External">
+<rect class="vd-legend-swatch vd-t-external" x="286" y="410" width="14" height="14" rx="3"/>
+<text x="293" y="421" font-size="9" class="vd-legend-glyph" text-anchor="middle">E</text>
 <text x="304" y="420" font-size="11" class="vd-legend-label" text-anchor="start">External</text>
+</g>
+<g role="listitem" aria-label="Default link">
 <line class="vd-legend-line vd-v-default" x1="376.8" y1="416" x2="390.8" y2="416"/>
 <text x="394.8" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Default link</text>
+</g>
+<g role="listitem" aria-label="Emphasis link">
 <line class="vd-legend-line vd-v-emphasis" x1="494" y1="416" x2="508" y2="416"/>
 <text x="512" y="420" font-size="11" class="vd-legend-label" text-anchor="start">Emphasis link</text>
+</g>
 </g>
 </g>
 </svg>
@@ -383,142 +435,201 @@ section.vd-cards {
     }
   }
 
+  /* nodeEdges[nodeId] = [edgeId...] : 検索時に接続辺を強調するための対応表 */
+  var nodeEdges = Object.create(null);
+  if (data && Array.isArray(data.connections)) {
+    for (var j = 0; j < data.connections.length; j++) {
+      var cn = data.connections[j];
+      if (!cn || typeof cn.id !== "string") { continue; }
+      (nodeEdges[cn.from] = nodeEdges[cn.from] || []).push(cn.id);
+      (nodeEdges[cn.to] = nodeEdges[cn.to] || []).push(cn.id);
+    }
+  }
+
   /* ---- pan / zoom: viewBox を直接操作する ---- */
   var vb0 = (svg.getAttribute("viewBox") || "0 0 100 100").split(/\s+/).map(Number);
   var vb = vb0.slice();
-
-  function applyViewBox() {
-    svg.setAttribute("viewBox", vb.join(" "));
-  }
+  function applyViewBox() { svg.setAttribute("viewBox", vb.join(" ")); }
 
   var stage = document.querySelector(".vd-stage") || svg;
-  var panning = false;
-  var lastX = 0, lastY = 0;
 
   function unitsPerPixel() {
     var r = svg.getBoundingClientRect();
-    if (r.width <= 0) { return 1; }
-    return vb[2] / r.width;
+    return r.width > 0 ? vb[2] / r.width : 1;
   }
+  function pointerRatio(clientX, clientY) {
+    var r = svg.getBoundingClientRect();
+    return {
+      x: r.width > 0 ? (clientX - r.left) / r.width : 0.5,
+      y: r.height > 0 ? (clientY - r.top) / r.height : 0.5
+    };
+  }
+  function zoomBy(factor, px, py) {
+    var nw = vb[2] * factor, nh = vb[3] * factor;
+    if (nw < vb0[2] / 50 || nw > vb0[2] * 50) { return; }
+    vb[0] += (vb[2] - nw) * px;
+    vb[1] += (vb[3] - nh) * py;
+    vb[2] = nw; vb[3] = nh;
+    applyViewBox();
+  }
+  function resetView() { vb = vb0.slice(); applyViewBox(); }
+
+  /* --- ポインタ: 1本なら pan、2本なら pinch zoom --- */
+  var pointers = Object.create(null);
+  var pointerCount = 0, lastX = 0, lastY = 0, pinchDist = 0;
 
   stage.addEventListener("pointerdown", function (ev) {
-    panning = true;
-    lastX = ev.clientX;
-    lastY = ev.clientY;
-    stage.classList.add("vd-panning");
-    if (stage.setPointerCapture) { stage.setPointerCapture(ev.pointerId); }
+    pointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    pointerCount++;
+    if (pointerCount === 1) { lastX = ev.clientX; lastY = ev.clientY; stage.classList.add("vd-panning"); }
+    if (stage.setPointerCapture) { try { stage.setPointerCapture(ev.pointerId); } catch (e) { /* noop */ } }
   });
   stage.addEventListener("pointermove", function (ev) {
-    if (!panning) { return; }
+    if (!pointers[ev.pointerId]) { return; }
+    pointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    var ids = Object.keys(pointers);
+    if (ids.length >= 2) {
+      var a = pointers[ids[0]], b = pointers[ids[1]];
+      var dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinchDist > 0 && dist > 0) {
+        var mid = pointerRatio((a.x + b.x) / 2, (a.y + b.y) / 2);
+        zoomBy(pinchDist / dist, mid.x, mid.y);
+      }
+      pinchDist = dist;
+      return;
+    }
     var k = unitsPerPixel();
     vb[0] -= (ev.clientX - lastX) * k;
     vb[1] -= (ev.clientY - lastY) * k;
-    lastX = ev.clientX;
-    lastY = ev.clientY;
+    lastX = ev.clientX; lastY = ev.clientY;
     applyViewBox();
   });
-  function endPan() {
-    panning = false;
-    stage.classList.remove("vd-panning");
+  function endPointer(ev) {
+    if (pointers[ev.pointerId]) { delete pointers[ev.pointerId]; pointerCount = Math.max(0, pointerCount - 1); }
+    if (pointerCount < 2) { pinchDist = 0; }
+    if (pointerCount === 0) { stage.classList.remove("vd-panning"); }
   }
-  stage.addEventListener("pointerup", endPan);
-  stage.addEventListener("pointercancel", endPan);
+  stage.addEventListener("pointerup", endPointer);
+  stage.addEventListener("pointercancel", endPointer);
 
+  /* wheel: 修飾キー (Ctrl/Cmd) 付きのみ zoom。通常 wheel はページスクロールに委ねる。 */
   stage.addEventListener("wheel", function (ev) {
+    if (!ev.ctrlKey && !ev.metaKey) { return; }
     ev.preventDefault();
-    var r = svg.getBoundingClientRect();
-    var px = (ev.clientX - r.left) / r.width;
-    var py = (ev.clientY - r.top) / r.height;
-    var factor = ev.deltaY > 0 ? 1.12 : 1 / 1.12;
-    var nw = vb[2] * factor;
-    var nh = vb[3] * factor;
-    if (nw < vb0[2] / 40 || nw > vb0[2] * 40) { return; }
-    vb[0] += (vb[2] - nw) * px;
-    vb[1] += (vb[3] - nh) * py;
-    vb[2] = nw;
-    vb[3] = nh;
-    applyViewBox();
+    var p = pointerRatio(ev.clientX, ev.clientY);
+    zoomBy(ev.deltaY > 0 ? 1.12 : 1 / 1.12, p.x, p.y);
   }, { passive: false });
 
-  var resetBtn = document.getElementById("vd-reset");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", function () {
-      vb = vb0.slice();
-      applyViewBox();
-    });
+  /* キーボード: 矢印で pan、+/- で zoom、0/Home でリセット */
+  stage.addEventListener("keydown", function (ev) {
+    var step = vb[2] * 0.08;
+    switch (ev.key) {
+      case "ArrowLeft": vb[0] -= step; break;
+      case "ArrowRight": vb[0] += step; break;
+      case "ArrowUp": vb[1] -= step; break;
+      case "ArrowDown": vb[1] += step; break;
+      case "+": case "=": zoomBy(1 / 1.2, 0.5, 0.5); ev.preventDefault(); return;
+      case "-": case "_": zoomBy(1.2, 0.5, 0.5); ev.preventDefault(); return;
+      case "0": case "Home": resetView(); ev.preventDefault(); return;
+      default: return;
+    }
+    applyViewBox();
+    ev.preventDefault();
+  });
+
+  function bindClick(id, fn) {
+    var el = document.getElementById(id);
+    if (el) { el.addEventListener("click", fn); }
   }
+  bindClick("vd-reset", resetView);
+  bindClick("vd-zoom-in", function () { zoomBy(1 / 1.2, 0.5, 0.5); });
+  bindClick("vd-zoom-out", function () { zoomBy(1.2, 0.5, 0.5); });
 
   /* ---- テーマ切替 ---- */
   var themeBtn = document.getElementById("vd-theme");
-  function currentTheme() {
-    return document.documentElement.getAttribute("data-theme") || "";
+  function currentTheme() { return document.documentElement.getAttribute("data-theme") || ""; }
+  function effectiveDark() {
+    var cur = currentTheme();
+    if (cur === "dark") { return true; }
+    if (cur === "light") { return false; }
+    try { return matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return false; }
+  }
+  function syncThemePressed() {
+    if (themeBtn) { themeBtn.setAttribute("aria-pressed", effectiveDark() ? "true" : "false"); }
   }
   function setTheme(t) {
-    if (t === "dark" || t === "light") {
-      document.documentElement.setAttribute("data-theme", t);
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
-    try { localStorage.setItem("vd-theme", t); } catch (e) { /* 保存不可でも動作継続 */ }
+    if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); }
+    else { document.documentElement.removeAttribute("data-theme"); }
+    syncThemePressed();
+    try { localStorage.setItem("vd-theme", t); } catch (e) { /* 保存不可でも継続 */ }
   }
   if (themeBtn) {
-    themeBtn.addEventListener("click", function () {
-      var cur = currentTheme();
-      var prefersDark = false;
-      try { prefersDark = matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { /* noop */ }
-      var effectiveDark = cur === "dark" || (cur === "" && prefersDark);
-      setTheme(effectiveDark ? "light" : "dark");
-    });
+    themeBtn.addEventListener("click", function () { setTheme(effectiveDark() ? "light" : "dark"); });
   }
   try {
     var saved = localStorage.getItem("vd-theme");
     if (saved === "dark" || saved === "light") { setTheme(saved); }
   } catch (e) { /* noop */ }
+  syncThemePressed();
 
-  /* ---- ノード検索 ---- */
+  /* ---- ノード検索 (接続辺・関連境界も強調) ---- */
   var nodes = document.querySelectorAll(".vd-node");
+  var edgeGroups = document.querySelectorAll(".vd-edge-group");
+  var boundaries = document.querySelectorAll(".vd-boundary");
+  var status = document.getElementById("vd-search-status");
+
+  function nodeId(el) { return (el.id || "").replace(/^vd-node-/, ""); }
+  function edgeId(el) { return (el.id || "").replace(/^vd-edge-/, ""); }
+  function unmark(el) { el.classList.remove("vd-dim"); el.classList.remove("vd-hit"); }
+
   function clearMarks() {
-    for (var i = 0; i < nodes.length; i++) {
-      nodes[i].classList.remove("vd-dim");
-      nodes[i].classList.remove("vd-hit");
-    }
+    var k;
+    for (k = 0; k < nodes.length; k++) { unmark(nodes[k]); }
+    for (k = 0; k < edgeGroups.length; k++) { unmark(edgeGroups[k]); }
+    for (k = 0; k < boundaries.length; k++) { unmark(boundaries[k]); }
+    if (status) { status.textContent = ""; }
   }
-  var searchEl = document.getElementById("vd-search");
-  if (searchEl) {
-    searchEl.addEventListener("input", function () {
-      var q = searchEl.value.trim().toLowerCase();
-      if (q === "") { clearMarks(); return; }
-      for (var i = 0; i < nodes.length; i++) {
-        var el = nodes[i];
-        var label = (el.getAttribute("data-label") || "").toLowerCase();
-        var id = (el.id || "").replace(/^vd-node-/, "").toLowerCase();
-        if (label.indexOf(q) >= 0 || id.indexOf(q) >= 0) {
-          el.classList.add("vd-hit");
-          el.classList.remove("vd-dim");
-        } else {
-          el.classList.add("vd-dim");
-          el.classList.remove("vd-hit");
-        }
+
+  function runSearch(q) {
+    q = q.trim().toLowerCase();
+    if (q === "") { clearMarks(); return; }
+    var hitNodes = Object.create(null), hitCount = 0, i;
+    for (i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var label = (el.getAttribute("data-label") || "").toLowerCase();
+      var id = nodeId(el).toLowerCase();
+      if (label.indexOf(q) >= 0 || id.indexOf(q) >= 0) {
+        el.classList.add("vd-hit"); el.classList.remove("vd-dim");
+        hitNodes[nodeId(el)] = true; hitCount++;
+      } else {
+        el.classList.add("vd-dim"); el.classList.remove("vd-hit");
       }
-    });
+    }
+    var hitEdges = Object.create(null), id2;
+    for (id2 in hitNodes) {
+      var es = nodeEdges[id2];
+      if (es) { for (var m = 0; m < es.length; m++) { hitEdges[es[m]] = true; } }
+    }
+    for (i = 0; i < edgeGroups.length; i++) {
+      var eg = edgeGroups[i];
+      if (hitEdges[edgeId(eg)]) { eg.classList.add("vd-hit"); eg.classList.remove("vd-dim"); }
+      else { eg.classList.add("vd-dim"); eg.classList.remove("vd-hit"); }
+    }
+    for (i = 0; i < boundaries.length; i++) { boundaries[i].classList.add("vd-dim"); boundaries[i].classList.remove("vd-hit"); }
+    if (status) { status.textContent = hitCount + " / " + nodes.length; }
   }
+
+  var searchEl = document.getElementById("vd-search");
+  if (searchEl) { searchEl.addEventListener("input", function () { runSearch(searchEl.value); }); }
 
   /* ---- ディープリンク (#focus=node-id) ----
    * location.hash は攻撃者が制御できる。許可文字にマッチさせ、
    * 既知のノード ID と照合してから使う。マッチしなければ黙って無視する。 */
   function applyHashFocus() {
-    var h = location.hash || "";
-    var m = /^#focus=([A-Za-z0-9][A-Za-z0-9_-]{0,63})$/.exec(h);
-    if (!m) { return; }
-    var id = m[1];
-    if (!knownIds[id]) { return; }
-    var el = document.getElementById("vd-node-" + id);
-    if (!el) { return; }
-    clearMarks();
-    for (var i = 0; i < nodes.length; i++) {
-      if (nodes[i] !== el) { nodes[i].classList.add("vd-dim"); }
-    }
-    el.classList.add("vd-hit");
+    var mt = /^#focus=([A-Za-z0-9][A-Za-z0-9_-]{0,63})$/.exec(location.hash || "");
+    if (!mt || !knownIds[mt[1]]) { return; }
+    if (searchEl) { searchEl.value = mt[1]; }
+    runSearch(mt[1]);
   }
   window.addEventListener("hashchange", applyHashFocus);
   applyHashFocus();
