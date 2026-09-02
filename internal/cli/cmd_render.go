@@ -32,7 +32,7 @@ func (c *CLI) cmdRender(args []string) int {
 
 // renderLike は render / deliver 共通の入口 (deliver は snapshot 経由で cmd_deliver.go)。
 func (c *CLI) renderLike(args []string, _ bool) int {
-	f, pos, err := splitArgs(args)
+	f, pos, err := splitArgs(args, flagJSON, flagQuality, flagOpen, flagNoOpen)
 	if err != nil {
 		fmt.Fprintf(c.Stderr, "veduta render: %v\n", err)
 		return ExitUsage

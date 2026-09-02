@@ -22,7 +22,7 @@ type validateReport struct {
 }
 
 func (c *CLI) cmdValidate(args []string) int {
-	f, pos, err := splitArgs(args)
+	f, pos, err := splitArgs(args, flagJSON, flagQuality)
 	if err != nil {
 		fmt.Fprintf(c.Stderr, "veduta validate: %v\n", err)
 		return ExitUsage

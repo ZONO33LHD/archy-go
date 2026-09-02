@@ -16,10 +16,29 @@ type cmdFlags struct {
 	noOpen  bool   // --no-open 明示
 }
 
-// splitArgs は args をフラグと位置引数に分離する。
+// フラグ名。コマンドごとに受理するフラグを絞る。
+const (
+	flagJSON    = "--json"
+	flagQuality = "--quality"
+	flagOpen    = "--open"
+	flagNoOpen  = "--no-open"
+)
+
+// splitArgs は args をフラグと位置引数に分離する。allowed はこのコマンドが受理するフラグ名の集合。
 // フラグは "--" 始まりのみ。"-x.html" のような単一ダッシュ始まりは位置引数として扱い、
 // "--" 以降はすべて位置引数とする ('-' 始まりの正当なファイル名を排除しないため)。
-func splitArgs(args []string) (cmdFlags, []string, error) {
+// 無関係なフラグ (例: doctor --quality) は使い方の誤りとして拒否する。
+func splitArgs(args []string, allowed ...string) (cmdFlags, []string, error) {
+	allow := map[string]bool{}
+	for _, a := range allowed {
+		allow[a] = true
+	}
+	ensure := func(name string) error {
+		if !allow[name] {
+			return fmt.Errorf("このコマンドでは %s は使用できません", name)
+		}
+		return nil
+	}
 	var f cmdFlags
 	var pos []string
 	terminated := false
@@ -32,19 +51,34 @@ func splitArgs(args []string) (cmdFlags, []string, error) {
 		switch {
 		case a == "--":
 			terminated = true
-		case a == "--json":
+		case a == flagJSON:
+			if err := ensure(flagJSON); err != nil {
+				return f, nil, err
+			}
 			f.json = true
-		case a == "--open":
+		case a == flagOpen:
+			if err := ensure(flagOpen); err != nil {
+				return f, nil, err
+			}
 			f.open = true
-		case a == "--no-open":
+		case a == flagNoOpen:
+			if err := ensure(flagNoOpen); err != nil {
+				return f, nil, err
+			}
 			f.noOpen = true
-		case a == "--quality":
+		case a == flagQuality:
+			if err := ensure(flagQuality); err != nil {
+				return f, nil, err
+			}
 			if i+1 >= len(args) {
 				return f, nil, fmt.Errorf("--quality に値がありません")
 			}
 			i++
 			f.quality = args[i]
 		case strings.HasPrefix(a, "--quality="):
+			if err := ensure(flagQuality); err != nil {
+				return f, nil, err
+			}
 			f.quality = strings.TrimPrefix(a, "--quality=")
 		case strings.HasPrefix(a, "--"):
 			return f, nil, fmt.Errorf("未知のフラグです: %s", a)

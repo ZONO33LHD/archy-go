@@ -111,3 +111,63 @@ func TestRouteConflictRejected(t *testing.T) {
 		t.Errorf("ref/route-conflict が返りません: %v", diagCodes(res))
 	}
 }
+
+// TestPerCommandFlagRejection はコマンドが受理しないフラグを ExitUsage で拒否することを検証する
+// (レビュー指摘: doctor --quality や examples --open が黙って受理されていた)。
+func TestPerCommandFlagRejection(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"doctor-quality", []string{"doctor", "--quality", "showcase"}},
+		{"examples-open", []string{"examples", "--open"}},
+		{"doctor-open", []string{"doctor", "--open"}},
+		{"validate-open", []string{"validate", "architecture", "x.json", "--open"}},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			fl := &fakeLauncher{}
+			c, _, dir := newTestCLI(t, fl, permissiveProbe(map[string]string{"VEDUTA_NO_OPEN": "1"}))
+			_ = dir
+			if code := c.Run(tt.args); code != ExitUsage {
+				t.Errorf("%v の終了コード = %d, want ExitUsage(%d)", tt.args, code, ExitUsage)
+			}
+		})
+	}
+}
+
+// TestOutputWriteFailurePropagates は標準出力の書き込み失敗が ExitInternal になることを検証する
+// (レビュー指摘: writeJSON のエラーを無視して成功終了していた)。
+func TestOutputWriteFailurePropagates(t *testing.T) {
+	fl := &fakeLauncher{}
+	dir := t.TempDir()
+	in := writeInput(t, dir, "in.json", buildDocJSON("ok"))
+	c := &CLI{
+		Stdout:   failWriter{},
+		Stderr:   &bytesBuffer{},
+		Cwd:      dir,
+		Launcher: fl,
+		Probe:    permissiveProbe(map[string]string{"VEDUTA_NO_OPEN": "1"}),
+		Version:  "test",
+	}
+	code := c.Run([]string{"validate", "architecture", in, "--json"})
+	if code != ExitInternal {
+		t.Errorf("書き込み失敗時の終了コード = %d, want ExitInternal(%d)", code, ExitInternal)
+	}
+}
+
+// failWriter は常に書き込みエラーを返す io.Writer。
+type failWriter struct{}
+
+func (failWriter) Write(p []byte) (int, error) { return 0, errWrite }
+
+var errWrite = &writeErr{}
+
+type writeErr struct{}
+
+func (*writeErr) Error() string { return "simulated write failure" }
+
+// bytesBuffer は最小の書き込み可能バッファ (stderr 用)。
+type bytesBuffer struct{ b []byte }
+
+func (w *bytesBuffer) Write(p []byte) (int, error) { w.b = append(w.b, p...); return len(p), nil }

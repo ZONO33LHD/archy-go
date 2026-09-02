@@ -40,7 +40,7 @@ type deliverReceipt struct {
 }
 
 func (c *CLI) cmdDeliver(args []string) int {
-	f, pos, err := splitArgs(args)
+	f, pos, err := splitArgs(args, flagJSON, flagQuality, flagOpen, flagNoOpen)
 	if err != nil {
 		fmt.Fprintf(c.Stderr, "veduta deliver: %v\n", err)
 		return ExitUsage

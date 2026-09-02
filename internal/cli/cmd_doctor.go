@@ -29,7 +29,7 @@ type doctorCheck struct {
 }
 
 func (c *CLI) cmdDoctor(args []string) int {
-	f, pos, err := splitArgs(args)
+	f, pos, err := splitArgs(args, flagJSON)
 	if err != nil || len(pos) != 0 {
 		fmt.Fprintln(c.Stderr, "使い方: veduta doctor [--json]")
 		return ExitUsage
