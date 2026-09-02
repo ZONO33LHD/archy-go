@@ -416,17 +416,37 @@ func buildLegend(l *render.Layout) {
 		}
 	}
 
-	// 凡例の矩形をコンテンツ bbox の下に置く。
+	// 凡例をコンテンツ bbox の下に置き、本体幅を上限に折り返してエントリ位置を確定する。
+	// 折り返すことで、多数の種別・variant を使っても凡例が本体より横に広がって
+	// viewBox を引き伸ばす (本体が縮む) のを防ぐ。
 	content := contentBBox(l)
-	width := 0.0
-	for _, en := range l.Legend {
-		width += 18 + shared.TextWidth(en.Label, legendFont) + 20
+	const rowHeight = 22.0
+	maxWidth := content.W
+	if maxWidth < 200 {
+		maxWidth = 200 // 本体が極端に狭い場合の下限
 	}
-	width = shared.Round2(width)
+	startX := shared.Round2(content.X)
+	startY := shared.Round2(content.MaxY() + legendGapY)
+
+	x, y := startX, startY
+	maxRowRight := startX
+	for i := range l.Legend {
+		entryW := shared.Round2(18 + shared.TextWidth(l.Legend[i].Label, legendFont) + 20)
+		if x > startX && x+entryW-startX > maxWidth {
+			x = startX // 行を折り返す
+			y = shared.Round2(y + rowHeight)
+		}
+		l.Legend[i].X = x
+		l.Legend[i].Y = y
+		if x+entryW > maxRowRight {
+			maxRowRight = x + entryW
+		}
+		x = shared.Round2(x + entryW)
+	}
 	l.LegendRect = geometry.Rect{
-		X: shared.Round2(content.X),
-		Y: shared.Round2(content.MaxY() + legendGapY),
-		W: width, H: 20,
+		X: startX, Y: startY,
+		W: shared.Round2(maxRowRight - startX),
+		H: shared.Round2(y + rowHeight - startY),
 	}
 }
 

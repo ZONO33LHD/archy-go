@@ -80,7 +80,7 @@ type BoundaryBox struct {
 	LabelFont float64
 }
 
-// LegendEntry は凡例の 1 エントリ。
+// LegendEntry は凡例の 1 エントリ。位置は layout が確定する (折り返し込み)。
 type LegendEntry struct {
 	// Kind はノード種別名または辺 variant 名。
 	Kind string
@@ -88,6 +88,8 @@ type LegendEntry struct {
 	Label string
 	// IsEdge は辺 variant の凡例か。
 	IsEdge bool
+	// X / Y はエントリ左上の確定座標 (本体幅で折り返し済み)。
+	X, Y float64
 }
 
 // Port は確定ポート位置。

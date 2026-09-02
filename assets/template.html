@@ -12,11 +12,16 @@
   <h1 class="vd-title">{{VD_TITLE}}</h1>
   <div class="vd-controls">
     <input id="vd-search" type="search" placeholder="{{VD_T_SEARCH}}" aria-label="{{VD_T_SEARCH}}">
+    <span id="vd-search-status" class="vd-search-status" role="status" aria-live="polite"></span>
+    <div class="vd-zoom" role="group" aria-label="{{VD_T_ZOOM}}">
+      <button id="vd-zoom-out" type="button" aria-label="{{VD_T_ZOOMOUT}}">&minus;</button>
+      <button id="vd-zoom-in" type="button" aria-label="{{VD_T_ZOOMIN}}">+</button>
+    </div>
     <button id="vd-reset" type="button">{{VD_T_RESET}}</button>
-    <button id="vd-theme" type="button">{{VD_T_THEME}}</button>
+    <button id="vd-theme" type="button" aria-pressed="false">{{VD_T_THEME}}</button>
   </div>
 </header>
-<main class="vd-stage">
+<main class="vd-stage" tabindex="0" role="application" aria-label="{{VD_T_STAGE}}">
 {{VD_SVG}}</main>
 {{VD_CARDS}}<script type="application/json" id="vd-data">{{VD_DATA}}</script>
 <script>{{VD_JS}}</script>

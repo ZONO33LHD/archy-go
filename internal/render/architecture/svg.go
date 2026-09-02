@@ -7,6 +7,7 @@
 package architecture
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/ZONO33LHD/archy-go/internal/geometry"
@@ -23,9 +24,9 @@ func (r *Renderer) SVG(l *render.Layout) string {
 	b.WriteString(`<svg class="vd-svg" xmlns="http://www.w3.org/2000/svg" viewBox="`)
 	b.WriteString(shared.Coord(l.ViewBox[0]) + " " + shared.Coord(l.ViewBox[1]) + " " +
 		shared.Coord(l.ViewBox[2]) + " " + shared.Coord(l.ViewBox[3]))
-	b.WriteString(`" role="img" aria-label="`)
-	b.WriteString(safe.HTML(l.Title))
-	b.WriteString("\">\n")
+	b.WriteString(`" role="img" aria-labelledby="vd-svg-title vd-svg-desc" tabindex="0">` + "\n")
+	b.WriteString(`<title id="vd-svg-title">` + safe.HTML(l.Title) + "</title>\n")
+	b.WriteString(`<desc id="vd-svg-desc">` + safe.HTML(svgDescription(l)) + "</desc>\n")
 
 	writeDefs(&b)
 	b.WriteString(`<g id="vd-canvas">` + "\n")
@@ -136,12 +137,23 @@ func safeType(t string) string {
 	return "external"
 }
 
+// typeGlyph はノード種別を表す 1 文字バッジ (色に依存しない識別符号)。
+// 色覚差やグレースケール印刷でも種別を判別できるようにする。
+var typeGlyph = map[string]string{
+	"frontend": "F", "backend": "B", "database": "D", "cloud": "C",
+	"security": "S", "messagebus": "M", "external": "E",
+}
+
 func writeNode(b *strings.Builder, n render.Node) {
 	idAttr := ""
 	if safe.IsValidID(n.ID) {
 		idAttr = ` id="vd-node-` + n.ID + `"`
 	}
-	b.WriteString(`<g class="vd-node vd-t-` + safeType(n.Type) + `"` + idAttr +
+	t := safeType(n.Type)
+	// 支援技術向けに種別とラベルを aria-label で伝える (label はエスケープ済み)。
+	aria := typeLabels[t] + ": " + n.Label
+	b.WriteString(`<g class="vd-node vd-t-` + t + `"` + idAttr +
+		` role="group" aria-label="` + safe.HTML(aria) + `"` +
 		` data-label="` + safe.HTML(n.Label) + `">` + "\n")
 	b.WriteString(`<rect class="vd-node-box" ` + rectAttrs(n.Rect) + ` rx="10"/>` + "\n")
 	c := n.Rect.Center()
@@ -151,6 +163,10 @@ func writeNode(b *strings.Builder, n render.Node) {
 	} else {
 		textEl(b, c.X, c.Y+n.LabelFont*0.35, n.LabelFont, "vd-node-label", "middle", n.Label)
 	}
+	// 種別グリフバッジ (左上角)。色以外の識別符号。
+	bx, by := shared.Round2(n.Rect.X+12), shared.Round2(n.Rect.Y+12)
+	b.WriteString(`<circle class="vd-node-glyph-bg" cx="` + shared.Coord(bx) + `" cy="` + shared.Coord(by) + `" r="8"/>` + "\n")
+	textEl(b, bx, by+3, 9, "vd-node-glyph", "middle", typeGlyph[t])
 	if n.HasTag {
 		b.WriteString(`<rect class="vd-node-tag-pill" ` + rectAttrs(n.TagRect) + ` rx="8"/>` + "\n")
 		tc := n.TagRect.Center()
@@ -159,25 +175,47 @@ func writeNode(b *strings.Builder, n render.Node) {
 	b.WriteString("</g>\n")
 }
 
+// svgDescription は図の概要を数値のみで記述する (支援技術向け。IR 由来文字列は含めない)。
+func svgDescription(l *render.Layout) string {
+	counts := map[string]int{}
+	for _, n := range l.Nodes {
+		counts[safeType(n.Type)]++
+	}
+	var parts []string
+	for _, t := range typeOrder {
+		if counts[t] > 0 {
+			parts = append(parts, strconv.Itoa(counts[t])+" "+typeLabels[t])
+		}
+	}
+	desc := strconv.Itoa(len(l.Nodes)) + " components (" + strings.Join(parts, ", ") + "), " +
+		strconv.Itoa(len(l.Edges)) + " connections"
+	if len(l.Boundaries) > 0 {
+		desc += ", " + strconv.Itoa(len(l.Boundaries)) + " boundaries"
+	}
+	return desc + "."
+}
+
 func writeLegend(b *strings.Builder, l *render.Layout) {
 	if len(l.Legend) == 0 {
 		return
 	}
-	b.WriteString(`<g class="vd-legend">` + "\n")
-	x := l.LegendRect.X
-	y := l.LegendRect.Y
+	b.WriteString(`<g class="vd-legend" role="list" aria-label="Legend">` + "\n")
 	for _, en := range l.Legend {
+		x, y := en.X, en.Y
+		b.WriteString(`<g role="listitem" aria-label="` + safe.HTML(en.Label) + `">` + "\n")
 		if en.IsEdge {
 			b.WriteString(`<line class="vd-legend-line vd-v-` + safeVariant(en.Kind) +
 				`" x1="` + shared.Coord(x) + `" y1="` + shared.Coord(y+10) +
 				`" x2="` + shared.Coord(x+14) + `" y2="` + shared.Coord(y+10) + `"/>` + "\n")
 		} else {
-			b.WriteString(`<rect class="vd-legend-swatch vd-t-` + safeType(en.Kind) +
-				`" x="` + shared.Coord(x) + `" y="` + shared.Coord(y+4) + `" width="12" height="12" rx="3"/>` + "\n")
+			t := safeType(en.Kind)
+			b.WriteString(`<rect class="vd-legend-swatch vd-t-` + t +
+				`" x="` + shared.Coord(x) + `" y="` + shared.Coord(y+4) + `" width="14" height="14" rx="3"/>` + "\n")
+			// 種別グリフをスウォッチに重ねる (色以外の識別符号)。
+			textEl(b, x+7, y+15, 9, "vd-legend-glyph", "middle", typeGlyph[t])
 		}
-		tx := x + 18
-		textEl(b, tx, y+14, legendFont, "vd-legend-label", "start", en.Label)
-		x = shared.Round2(tx + shared.TextWidth(en.Label, legendFont) + 20)
+		textEl(b, x+18, y+14, legendFont, "vd-legend-label", "start", en.Label)
+		b.WriteString("</g>\n")
 	}
 	b.WriteString("</g>\n")
 }

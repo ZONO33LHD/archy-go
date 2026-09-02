@@ -12,6 +12,10 @@ type Catalog struct {
 	ThemeButton       string
 	ResetButton       string
 	NotesHeading      string
+	ZoomGroup         string
+	ZoomIn            string
+	ZoomOut           string
+	Stage             string
 }
 
 var catalogs = map[string]Catalog{
@@ -21,6 +25,10 @@ var catalogs = map[string]Catalog{
 		ThemeButton:       "Theme",
 		ResetButton:       "Reset view",
 		NotesHeading:      "Notes",
+		ZoomGroup:         "Zoom",
+		ZoomIn:            "Zoom in",
+		ZoomOut:           "Zoom out",
+		Stage:             "Diagram canvas (drag to pan, Ctrl+wheel or pinch to zoom, arrow keys to move)",
 	},
 	"ja": {
 		Lang:              "ja",
@@ -28,6 +36,10 @@ var catalogs = map[string]Catalog{
 		ThemeButton:       "テーマ",
 		ResetButton:       "表示をリセット",
 		NotesHeading:      "ノート",
+		ZoomGroup:         "ズーム",
+		ZoomIn:            "拡大",
+		ZoomOut:           "縮小",
+		Stage:             "図キャンバス (ドラッグでパン、Ctrl+ホイールまたはピンチでズーム、矢印キーで移動)",
 	},
 	"zh-CN": {
 		Lang:              "zh-CN",
@@ -35,6 +47,10 @@ var catalogs = map[string]Catalog{
 		ThemeButton:       "主题",
 		ResetButton:       "重置视图",
 		NotesHeading:      "备注",
+		ZoomGroup:         "缩放",
+		ZoomIn:            "放大",
+		ZoomOut:           "缩小",
+		Stage:             "图画布 (拖动平移，Ctrl+滚轮或双指缩放，方向键移动)",
 	},
 }
 

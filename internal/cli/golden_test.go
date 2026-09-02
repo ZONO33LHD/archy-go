@@ -295,6 +295,7 @@ func svgTexts(t *testing.T, svg string) []string {
 	t.Helper()
 	dec := xml.NewDecoder(strings.NewReader(svg))
 	var texts []string
+	skip := 0 // <title>/<desc> は意図的な説明メタデータなので本文チェックから除外する
 	for {
 		tok, err := dec.Token()
 		if err != nil {
@@ -303,8 +304,21 @@ func svgTexts(t *testing.T, svg string) []string {
 			}
 			t.Fatalf("SVG が整形式の XML ではありません: %v", err)
 		}
-		if cd, ok := tok.(xml.CharData); ok {
-			texts = append(texts, string(cd))
+		switch el := tok.(type) {
+		case xml.StartElement:
+			if el.Name.Local == "title" || el.Name.Local == "desc" {
+				skip++
+			}
+		case xml.EndElement:
+			if el.Name.Local == "title" || el.Name.Local == "desc" {
+				if skip > 0 {
+					skip--
+				}
+			}
+		case xml.CharData:
+			if skip == 0 {
+				texts = append(texts, string(el))
+			}
 		}
 	}
 	return texts

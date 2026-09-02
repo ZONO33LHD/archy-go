@@ -56,16 +56,21 @@ func AssembleHTML(doc *ir.Document, svg string) (string, error) {
 		"{{VD_T_SEARCH}}", safe.HTML(cat.SearchPlaceholder),
 		"{{VD_T_RESET}}", safe.HTML(cat.ResetButton),
 		"{{VD_T_THEME}}", safe.HTML(cat.ThemeButton),
+		"{{VD_T_ZOOM}}", safe.HTML(cat.ZoomGroup),
+		"{{VD_T_ZOOMIN}}", safe.HTML(cat.ZoomIn),
+		"{{VD_T_ZOOMOUT}}", safe.HTML(cat.ZoomOut),
+		"{{VD_T_STAGE}}", safe.HTML(cat.Stage),
 	)
 	// 出力の改行は常に LF (テンプレートは LF で管理される)。
 	return replacer.Replace(tmpl), nil
 }
 
 // knownPlaceholders はレンダラが置換する全プレースホルダ。
-var knownPlaceholders = []string{
+var KnownPlaceholders = []string{
 	"{{VD_LANG}}", "{{VD_SCRIPT_HASH}}", "{{VD_STYLE_HASH}}", "{{VD_TITLE}}",
 	"{{VD_CSS}}", "{{VD_JS}}", "{{VD_SVG}}", "{{VD_CARDS}}", "{{VD_DATA}}",
 	"{{VD_T_SEARCH}}", "{{VD_T_RESET}}", "{{VD_T_THEME}}",
+	"{{VD_T_ZOOM}}", "{{VD_T_ZOOMIN}}", "{{VD_T_ZOOMOUT}}", "{{VD_T_STAGE}}",
 }
 
 // unresolvedPlaceholders はテンプレート内の "{{VD_...}}" のうち、レンダラが置換しないものを返す。
@@ -85,7 +90,7 @@ func unresolvedPlaceholders(tmpl string) []string {
 			break
 		}
 		ph := rest[:end+2]
-		if !slices.Contains(knownPlaceholders, ph) {
+		if !slices.Contains(KnownPlaceholders, ph) {
 			missing = append(missing, ph)
 		}
 		rest = rest[end+2:]
